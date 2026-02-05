@@ -1,5 +1,6 @@
 function worker_folder_watch_requests(in_dir, poll_seconds)
-%WORKER_FOLDER_WATCH_REQUESTS Watch a folder for *.in.json requests and write *.out.json results.
+% WORKER_FOLDER_WATCH_REQUESTS Watch a folder for *.in.json
+%                              requests and write *.out.json results.
 %   Request file format:
 %     - filename: <base>.in.json
 %     - contents: either { "type": "charging"|"k_values", "params": {...} }
@@ -139,9 +140,16 @@ function stream_charging(out_path, OB_GUI_parameters)
 
     on_json = @(s) write_line(out_path, s, 'a');
     opts = struct('on_json', on_json, 'plot', false);
-    Simulate(OB_GUI_parameters, opts);
-
-    write_line(out_path, struct('type','end'));
+    try
+        Simulate(OB_GUI_parameters, opts);
+        write_line(out_path, struct('type','end'));
+    catch err
+        write_line(out_path, struct( ...
+            'type','error', ...
+            'message',err.message, ...
+            'stack',stack_to_cell(err.stack)));
+        write_line(out_path, struct('type','end'));
+    end
 end
 
 function n = min_len(cell_arrays)

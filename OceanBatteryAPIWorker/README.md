@@ -37,7 +37,10 @@ Compile with MATLAB Compiler (`mcc`), this can then be deployed to a server
 using the matlab-runtime container.
 
 ```bash
-mcc -m -v OceanBatteryAPIWorker/worker_folder_watch_requests.m -a OceanBatteryWithMatlab/functions -d OceanBatteryAPIWorker/dist
+mcc -m -v OceanBatteryAPIWorker/worker_folder_watch_requests.m \
+  -a OceanBatteryWithMatlab/functions \
+  -a OceanBatteryWithMatlab/functions/efficiency \
+  -d OceanBatteryAPIWorker/dist
 ```
 
 ## Release script
