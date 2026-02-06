@@ -6,6 +6,29 @@ function [H_loss_total_discharging, H_loss_minor_discharging, H_loss_major_disch
 %% Charging the Ocean Battery 
 % Charging; %Runs the charging script. 
 
+% API-related notes:
+% `opts` contains two handlers that are used by the API, but irrelevant for the simulation itself.
+% Both are optional, and if not provided, the default values shouldn't interfere with the simulation.
+% Please don't delete them, or diverge the code into two versions for the API and other simulations,
+% Since this likely causes unwanted divergence between both.
+% 
+% on_json     -> communicates intermediate (time series) results to the API. This way users can
+%                see the 'plots coming in hot'.
+% 
+% should_stop -> checks if the simulation should be stopped because the user requested it or they 
+%                closed the tab. This is used by the API to stop the simulation, and save
+%                computational resources.
+% 
+% If not provided, on_json does nothing and should_stop always returns false.
+%
+% some errors are tagged with 'OB:Deterministic:', this indicates to the API that the error is
+% deterministic for the given input, and the simulation result can be cached and does not need to be
+% retried. (Non-deterministic errors would be disk space full, out of memory, more spurious stuff)
+%
+% Caching is relevant and effective, since the simulation is used by students, and assignments probably
+% bias towards several consistent inputs being used a lot.
+
+
 if nargin < 4 || isempty(opts)
     opts = struct();
 end
@@ -16,6 +39,10 @@ end
 do_plot = true;
 if isstruct(opts) && isfield(opts, 'plot') && ~isempty(opts.plot)
     do_plot = logical(opts.plot);
+end
+should_stop = @() false;
+if isstruct(opts) && isfield(opts, 'should_stop') && ~isempty(opts.should_stop)
+    should_stop = opts.should_stop;
 end
 
 %% Setting parameters
@@ -44,7 +71,7 @@ end
 
 %% Reality check
 if V_wat_bladder(1) < V_wat_bladder_end
-    error('ERROR: End volume of the bladder exceeds the starting volume of the bladder during the discharge phase. Impossible situation.');
+    error('OB:Deterministic:BladderEndVolume', 'End volume of the bladder exceeds the starting volume of the bladder during the discharge phase. Impossible situation.');
 end
 
 %% Calculation of the starting flow
@@ -56,6 +83,9 @@ end
 %   instant in this part. 
 
 for i = 1:startup_steps
+    if should_stop()
+        error('OB:NonDeterministic:Cancelled', 'Simulation cancelled.');
+    end
     %[m] Major head loss of the discharging phase.
     H_loss_major_discharging(i) = Major_head_loss_discharging(Q_turbine_a(i), OB_GUI_parameters);
     
@@ -76,7 +106,7 @@ for i = 1:startup_steps
     H_static_discharging(i) = Depth - Water_level_rigid_reservoir(V_wat_rigid_discharging(i), D_rigid, Capacity_rigid); 
     
     if H_static_discharging(i)<H_loss_total_discharging(i)
-        error('ERROR: Head loss is larger than the static head. The system will not work because of too much losses.');
+        error('OB:Deterministic:HeadLossStatic', 'Head loss is larger than the static head. The system will not work because of too much losses.');
     end
     
     %[m] Head on the turbine (this does not yet include the losses incurred in the turbine). 
@@ -113,6 +143,9 @@ Q_turbine = linspace(0,Q_turbine_a(startup_steps),startup_steps); %[m^3/s] Linea
 %   "t_open_ball_valve" seconds of operation.  
 
 for i = 1:startup_steps
+    if should_stop()
+        error('OB:NonDeterministic:Cancelled', 'Simulation cancelled.');
+    end
     %[m] Major head loss of the discharging phase.
     H_loss_major_discharging(i) = Major_head_loss_discharging(Q_turbine(i), OB_GUI_parameters);
     
@@ -133,7 +166,7 @@ for i = 1:startup_steps
     H_static_discharging(i) = Depth - Water_level_rigid_reservoir(V_wat_rigid_discharging(i), D_rigid, Capacity_rigid); 
     
     if H_static_discharging(i)<H_loss_total_discharging(i)
-        error('ERROR: Head loss is larger than the static head. The system will not work because of too much losses.');
+        error('OB:Deterministic:HeadLossStatic', 'Head loss is larger than the static head. The system will not work because of too much losses.');
     end
     
     %[m] Head on the turbine (this does not yet include the losses incurred in the turbine). 
@@ -184,6 +217,9 @@ end
 %   The behaviour of the system after the "startup phase" is described by
 %   this while loop. 
 while  V_wat_bladder(i) > V_wat_bladder_end 
+    if should_stop()
+        error('OB:NonDeterministic:Cancelled', 'Simulation cancelled.');
+    end
        
     %[m] Major head loss of the discharging phase.
     H_loss_major_discharging(i) = Major_head_loss_discharging(Q_turbine(i), OB_GUI_parameters);
@@ -205,7 +241,7 @@ while  V_wat_bladder(i) > V_wat_bladder_end
     H_static_discharging(i) = Depth - Water_level_rigid_reservoir(V_wat_rigid_discharging(i), D_rigid, Capacity_rigid); 
     
     if H_static_discharging(i)<H_loss_total_discharging(i)
-        error('ERROR: Head loss is larger than the static head. The system will not work because of too much losses.');
+        error('OB:Deterministic:HeadLossStatic', 'Head loss is larger than the static head. The system will not work because of too much losses.');
     end
     
     %[m] Head on the turbine (this does not yet include the losses incurred in the turbine). 

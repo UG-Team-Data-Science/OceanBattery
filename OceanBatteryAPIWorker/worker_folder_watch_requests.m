@@ -63,10 +63,12 @@ function worker_folder_watch_requests(in_dir, poll_seconds)
                         error('Unknown request type: %s', req_type);
                 end
             catch err
+                is_det = is_deterministic_error(err);
                 write_json(out_path, struct( ...
                     'type','error', ...
                     'message',err.message, ...
-                    'stack',stack_to_cell(err.stack)));
+                    'deterministic',is_det, ...
+                    'stack',{stack_to_cell(err.stack)}));
             end
 
             % Remove claimed input once processed.
@@ -139,15 +141,19 @@ function stream_charging(out_path, OB_GUI_parameters)
     write_line(out_path, struct('type','start','request','charging','dt',dt), 'w');
 
     on_json = @(s) write_line(out_path, s, 'a');
-    opts = struct('on_json', on_json, 'plot', false);
+    alive_path = out_path_to_alive_path(out_path);
+    should_stop = @() ~is_alive(alive_path, 5);
+    opts = struct('on_json', on_json, 'plot', false, 'should_stop', should_stop);
     try
         Simulate(OB_GUI_parameters, opts);
         write_line(out_path, struct('type','end'));
     catch err
+        is_det = is_deterministic_error(err);
         write_line(out_path, struct( ...
             'type','error', ...
             'message',err.message, ...
-            'stack',stack_to_cell(err.stack)));
+            'deterministic',is_det, ...
+            'stack',{stack_to_cell(err.stack)}));
         write_line(out_path, struct('type','end'));
     end
 end
@@ -205,4 +211,39 @@ function c = stack_to_cell(st)
     for k = 1:numel(st)
         c{k} = sprintf('%s:%d', st(k).file, st(k).line);
     end
+end
+
+function tf = is_deterministic_error(err)
+    tf = false;
+    try
+        if isfield(err, 'identifier') && ~isempty(err.identifier)
+            tf = startsWith(err.identifier, 'OB:Deterministic');
+        end
+    catch
+        tf = false;
+    end
+end
+
+function path = out_path_to_alive_path(out_path)
+    [folder, name, ~] = fileparts(out_path);
+    if endsWith(name, '.out')
+        base = extractBefore(name, strlength(name) - strlength('.out') + 1);
+    else
+        base = name;
+    end
+    path = fullfile(folder, sprintf('%s.alive', base));
+end
+
+function alive = is_alive(path, ttl_seconds)
+    if exist(path, 'file') ~= 2
+        alive = false;
+        return;
+    end
+    info = dir(path);
+    if isempty(info)
+        alive = false;
+        return;
+    end
+    age_seconds = (now - info.datenum) * 86400;
+    alive = age_seconds <= ttl_seconds;
 end

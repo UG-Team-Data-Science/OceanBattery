@@ -4,6 +4,9 @@ function result = Simulate(OB_GUI_parameters, opts)
 if nargin < 2 || isempty(opts)
     opts = struct();
 end
+if ~isfield(opts, 'should_stop') || isempty(opts.should_stop)
+    opts.should_stop = @() false;
+end
 
 [T_empty_charging, E_elec_in_kWh, H_loss_total_charging, ...
     H_loss_major_charging, H_loss_minor_charging, H_loss_major_umbilical_charging, ...

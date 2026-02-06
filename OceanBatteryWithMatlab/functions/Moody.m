@@ -6,7 +6,7 @@ function f = Moody(relr,Re)
 % Output: f.
 
 if (Re < 0)
-error (sprintf('Reynolds number = %f cannot be negative',Re));
+error('OB:Deterministic:NegativeReynoldsNumber', 'Reynolds number = %f cannot be negative', Re);
 elseif (Re < 2000)
 f = 64/Re; return %Laminar flow
 end
@@ -29,5 +29,5 @@ f = fzero(coleFun,fi,optimset('TolX',dfTol,'Display','off'),relr,Re);
 
 % sanity check:
 if f<0
-   error(sprintf('Friction factor = %f, but cannot be negative',f)); 
+   error('OB:Deterministic:NegativeFrictionFactor', 'Friction factor = %f, but cannot be negative', f);
 end

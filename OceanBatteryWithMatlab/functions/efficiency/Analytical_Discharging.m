@@ -75,7 +75,7 @@ T_Wk        = T_Wc + 273;   %[K]    Water temperature kelvin
 %   Control range water temp
 if T_Wk<273 || T_Wk>313
     disp(T_water)
-    error('Water temperature outside accepted range')
+    error('OB:Deterministic:WaterTempRange', 'Water temperature outside accepted range')
 end
 
 %-----------------------------------
@@ -192,7 +192,7 @@ HL1_Lpipe_1    = 1598.34e-3;                    %[m]    Length between between e
 HL2_Lpipe_21   = 771.81e-3;                     %[m]    Lengte tussen sensor "turbine ingang" en ingang turbine systeem
 HL2_Lpipe_22   = 796.22e-3;                     %[m]    Lengte in turbine systeem met 1/3*Q
 HL2_Lpipe_23   = 158.72e-3;                     %[m]    Lengte in turbine systeem met 2/3*Q
-HL2_Lpipe_24   = 711.47e-3;                     %[m]    Lengte tussen uitgang turbine systeem en sensor "turbine uitgang
+HL2_Lpipe_24   = 711.47e-3;                     %[m]    Lengte tussen uitgang turbine systeem en sensor "turbine uitgang"
 
 % Section Length
 HL3_Lpipe_3    = 565.02e-3;                     %[m]    Minor head loss of pipe section between exit turbine (p4) and rigid reservoir (p5).
@@ -539,7 +539,7 @@ for  i = 1:(t_end/ts)
     
     % Negative Head Check
     if z(i)<0
-        error('negative head')
+        error('OB:Deterministic:NegativeHead', 'negative head')
     end
     
     v_outlet_no_interp(i) = sqrt(z(i)*2*g);                                 % Defining new fluid velocity value based on the new head over turbine updated for dynamic head (water level rise in rigid reservoir and total headloss)

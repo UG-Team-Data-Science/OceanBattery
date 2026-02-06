@@ -8,6 +8,27 @@ function [T_empty_charging, E_elec_in_kWh,H_loss_total_charging, ...
 % clear all;
 % clc;
 
+% API-related notes:
+% `opts` contains two handlers that are used by the API, but irrelevant for the simulation itself.
+% Both are optional, and if not provided, the default values shouldn't interfere with the simulation.
+% Please don't delete them, or diverge the code into two versions for the API and other simulations,
+% Since this likely causes unwanted divergence between both.
+% 
+% on_json     -> communicates intermediate (time series) results to the API. This way users can
+%                see the 'plots coming in hot'.
+% 
+% should_stop -> checks if the simulation should be stopped because the user requested it or they 
+%                closed the tab. This is used by the API to stop the simulation, and save
+%                computational resources.
+% 
+% some errors are tagged with 'OB:Deterministic:', this indicates to the API that the error is
+% deterministic for the given input, and the simulation result can be cached and does not need to be
+% retried. (Non-deterministic errors would be disk space full, out of memory, more spurious stuff)
+%
+% Caching is relevant and effective, since the simulation is used by students, and assignments probably
+% bias towards several consistent inputs being used a lot.
+
+
 if nargin < 2 || isempty(opts)
     opts = struct();
 end
@@ -18,6 +39,10 @@ end
 do_plot = true;
 if isstruct(opts) && isfield(opts, 'plot') && ~isempty(opts.plot)
     do_plot = logical(opts.plot);
+end
+should_stop = @() false;
+if isstruct(opts) && isfield(opts, 'should_stop') && ~isempty(opts.should_stop)
+    should_stop = opts.should_stop;
 end
 
 %% Setting parameters
@@ -35,11 +60,14 @@ Q_pump(1) = 0.00067; %[m^3/second] Initial guess of the flow throug the pump.
 
 %% Reality check
 if  V_wat_rigid_end > V_wat_rigid_charging(1)
-    error('ERROR: End volume of the rigid reservoir exceeds the starting volume. Impossible situation.');
+    error('OB:Deterministic:RigidEndVolume', 'End volume of the rigid reservoir exceeds the starting volume. Impossible situation.');
 end
 
 %% While loop
 while  V_wat_rigid_charging(i) > V_wat_rigid_end 
+    if should_stop()
+        error('OB:NonDeterministic:Cancelled', 'Simulation cancelled.');
+    end
     
     %[m] Minor head loss of the charging phase. 
     H_loss_minor_charging(i) = Minor_head_loss_charging(Q_pump(i),OB_GUI_parameters);

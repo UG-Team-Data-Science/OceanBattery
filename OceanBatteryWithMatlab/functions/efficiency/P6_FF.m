@@ -6,7 +6,7 @@ function f = P6_FF(relr,Re)
 % Output: f.
 
 if (Re < 0)
-error('Reynolds number = %f cannot be negative',Re);
+error('OB:Deterministic:NegativeReynoldsNumber', 'Reynolds number = %f, but cannot be negative', Re);
 elseif (Re < 2000)
 f = 64/Re; return % Laminar flow
 end
@@ -28,5 +28,5 @@ f = fzero_2(coleFun,fi,[],relr,Re);
 
 % Error check:
 if f<0
-   error('Friction factor = %f, but cannot be negative',f); 
+   error('OB:Deterministic:NegativeFrictionFactor', 'Friction factor = %f, but cannot be negative', f);
 end

@@ -11,7 +11,7 @@ P8_vars_minor_HL;
 %   Controle bereik watertemperatuur
 if T_Wk<273 || T_Wk>313
     disp(T_water)
-    error('Water temperature outside accepted range')
+    error('OB:Deterministic:WaterTempRange', 'Water temperature outside accepted range')
 end
 
 %   Dichtheid water (CIPM standard) 
